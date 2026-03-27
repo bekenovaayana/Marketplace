@@ -1,0 +1,49 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<div class="card">
+    <div class="row" style="justify-content: space-between;">
+        <h2>Report #{{ report.id }}</h2>
+        <a href="/admin/reports">Back to list</a>
+    </div>
+    <p><strong>Status:</strong> <span class="badge">{{ report.status.value }}</span></p>
+    <p><strong>Target:</strong> {{ report.target_type.value }} #{{ report.target_id }}</p>
+    <p><strong>Target preview:</strong> {{ report.target_preview or "-" }}</p>
+    <p><strong>Reason code:</strong> {{ report.reason_code.value }}</p>
+    <p><strong>Reason text:</strong> {{ report.reason_text or "-" }}</p>
+    <p><strong>Reporter user id:</strong> {{ report.reporter_user_id }}</p>
+    <p><strong>Created at:</strong> {{ report.created_at }}</p>
+    <p><strong>Updated at:</strong> {{ report.updated_at }}</p>
+    <p><strong>Reviewed by admin id:</strong> {{ report.reviewed_by_admin_id or "-" }}</p>
+    <p><strong>Reviewed at:</strong> {{ report.reviewed_at or "-" }}</p>
+    <p><strong>Resolution note:</strong> {{ report.resolution_note or "-" }}</p>
+</div>
+
+<div class="card">
+    <h3>Reporter Info</h3>
+    {% if report.reporter %}
+        <p><strong>Name:</strong> {{ report.reporter.full_name }}</p>
+        <p><strong>User ID:</strong> {{ report.reporter.id }}</p>
+        <p><strong>City:</strong> {{ report.reporter.city or "-" }}</p>
+    {% else %}
+        <p class="muted">Reporter data not available.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Moderation Actions</h3>
+    <div class="row">
+        <form method="post" action="/admin/reports/{{ report.id }}/resolve" style="flex:1; min-width:300px;">
+            <label for="resolve_note"><strong>Resolve note</strong></label>
+            <textarea id="resolve_note" name="resolution_note" rows="4" placeholder="Optional note for resolution"></textarea>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit">Resolve Report</button>
+        </form>
+        <form method="post" action="/admin/reports/{{ report.id }}/dismiss" style="flex:1; min-width:300px;">
+            <label for="dismiss_note"><strong>Dismiss note</strong></label>
+            <textarea id="dismiss_note" name="resolution_note" rows="4" placeholder="Optional note for dismissal"></textarea>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="secondary">Dismiss Report</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

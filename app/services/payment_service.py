@@ -24,6 +24,7 @@ class PaymentService:
         if not listing or listing.deleted_at is not None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
 
+        provider_reference = f"mock_pi_{uuid4().hex}"
         payment = Payment(
             user_id=actor.id,
             listing_id=listing_id,
@@ -31,10 +32,39 @@ class PaymentService:
             currency=currency,
             status=PaymentStatus.PENDING,
             provider="mock",
+            provider_reference=provider_reference,
         )
         self.payments.create(payment)
         self.db.commit()
         return payment
+
+    def process_webhook(self, *, provider_reference: str, event: str) -> Payment:
+        payment = self.payments.get_by_provider_reference(provider_reference=provider_reference)
+        if not payment:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
+
+        if event == "payment_succeeded":
+            if payment.status == PaymentStatus.SUCCESSFUL:
+                return payment
+            if payment.status != PaymentStatus.PENDING:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Payment is not pending")
+            updated = self.payments.update(
+                payment,
+                {"status": PaymentStatus.SUCCESSFUL, "paid_at": datetime.now(timezone.utc)},
+            )
+            self.db.commit()
+            return updated
+
+        if event == "payment_failed":
+            if payment.status in (PaymentStatus.FAILED, PaymentStatus.CANCELLED):
+                return payment
+            if payment.status != PaymentStatus.PENDING:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Payment is not pending")
+            updated = self.payments.update(payment, {"status": PaymentStatus.FAILED})
+            self.db.commit()
+            return updated
+
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unsupported webhook event")
 
     def simulate_success(self, *, actor: User, payment_id: int) -> Payment:
         payment = self.payments.get_by_id(payment_id)

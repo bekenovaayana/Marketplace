@@ -26,3 +26,10 @@ class CategoryRead(BaseSchema, TimestampFields):
     is_active: bool
     display_order: int
 
+
+class CategoryPublicRead(BaseSchema):
+    id: int
+    name: str
+    slug: str
+    listings_count: int
+

@@ -5,6 +5,12 @@ pymysql
 alembic
 pydantic
 pydantic-settings
+email-validator
 python-jose[cryptography]
 passlib[bcrypt]
+# passlib 1.7.x expects bcrypt to expose __about__.__version__ (bcrypt>=4 removes it)
+bcrypt==3.2.2
 python-multipart
+jinja2
+itsdangerous
+Pillow

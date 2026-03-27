@@ -12,6 +12,7 @@ class LoginRequest(BaseSchema):
 
 class TokenPair(BaseSchema):
     access_token: str
+    token: str | None = Field(default=None, description="Legacy alias for access_token")
     token_type: str = "bearer"
     refresh_token: str | None = None
 
@@ -19,4 +20,22 @@ class TokenPair(BaseSchema):
 class TokenPayload(BaseSchema):
     sub: str
     type: str
+
+
+class RefreshRequest(BaseSchema):
+    refresh_token: str
+
+
+class ForgotPasswordRequest(BaseSchema):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseSchema):
+    reset_token: str | None = None
+    detail: str
+
+
+class ResetPasswordRequest(BaseSchema):
+    reset_token: str
+    new_password: str = Field(min_length=8, max_length=128)
 

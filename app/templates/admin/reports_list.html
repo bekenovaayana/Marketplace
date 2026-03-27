@@ -1,0 +1,80 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<div class="card">
+    <h2>Reports</h2>
+    <form method="get" action="/admin/reports" class="row">
+        <label>Status</label>
+        <select name="status">
+            <option value="">All</option>
+            {% for value in status_options %}
+            <option value="{{ value }}" {% if value == status_filter %}selected{% endif %}>{{ value }}</option>
+            {% endfor %}
+        </select>
+        <label>Target Type</label>
+        <select name="target_type">
+            <option value="">All</option>
+            {% for value in target_type_options %}
+            <option value="{{ value }}" {% if value == target_type_filter %}selected{% endif %}>{{ value }}</option>
+            {% endfor %}
+        </select>
+        <label>Page Size</label>
+        <select name="page_size">
+            {% for value in [10, 20, 50, 100] %}
+            <option value="{{ value }}" {% if value == page_size %}selected{% endif %}>{{ value }}</option>
+            {% endfor %}
+        </select>
+        <input type="hidden" name="page" value="1">
+        <button type="submit">Apply Filters</button>
+    </form>
+</div>
+
+<div class="card">
+    {% if not items %}
+    <div class="muted">No reports found for selected filters.</div>
+    {% else %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Status</th>
+                <th>Target</th>
+                <th>Reason</th>
+                <th>Reporter</th>
+                <th>Created</th>
+                <th>Reviewed</th>
+                <th>Reviewed By</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for report in items %}
+            <tr>
+                <td>#{{ report.id }}</td>
+                <td><span class="badge">{{ report.status.value }}</span></td>
+                <td>{{ report.target_type.value }} #{{ report.target_id }}</td>
+                <td>{{ report.reason_code.value }}</td>
+                <td>{{ report.reporter_user_id }}</td>
+                <td>{{ report.created_at }}</td>
+                <td>{{ report.reviewed_at or "-" }}</td>
+                <td>{{ report.reviewed_by_admin_id or "-" }}</td>
+                <td><a href="/admin/reports/{{ report.id }}">View</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+
+<div class="card row">
+    <span class="muted">Total: {{ total }}</span>
+    <span class="muted">Page {{ page }} of {{ total_pages if total_pages > 0 else 1 }}</span>
+    <div class="actions">
+        {% if page > 1 %}
+            <a href="/admin/reports?page={{ page - 1 }}&page_size={{ page_size }}&status={{ status_filter }}&target_type={{ target_type_filter }}">Previous</a>
+        {% endif %}
+        {% if page < total_pages %}
+            <a href="/admin/reports?page={{ page + 1 }}&page_size={{ page_size }}&status={{ status_filter }}&target_type={{ target_type_filter }}">Next</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

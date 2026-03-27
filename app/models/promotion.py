@@ -12,6 +12,7 @@ from app.models.mixins import TimestampMixin
 
 
 class PromotionStatus(str, enum.Enum):
+    PENDING_PAYMENT = "pending_payment"
     ACTIVE = "active"
     EXPIRED = "expired"
     CANCELLED = "cancelled"
@@ -45,15 +46,20 @@ class Promotion(Base, TimestampMixin):
             values_callable=lambda x: [e.value for e in x],
         ),
         nullable=False,
-        server_default=PromotionStatus.ACTIVE.value,
+        server_default=PromotionStatus.PENDING_PAYMENT.value,
         index=True,
     )
 
+    days: Mapped[int] = mapped_column(nullable=False, server_default="7")
     target_city: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    # Legacy column kept for backward-compatible migrations/data.
     purchased_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, server_default="0")
     currency: Mapped[str] = mapped_column(String(3), nullable=False, server_default="USD")
+    payment_provider: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    payment_intent_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
     user = relationship("User", back_populates="promotions")
     listing = relationship("Listing", back_populates="promotions")
@@ -61,4 +67,6 @@ class Promotion(Base, TimestampMixin):
 
 
 Index("ix_promotions_listing_status", Promotion.listing_id, Promotion.status)
+Index("ix_promotions_user_status", Promotion.user_id, Promotion.status)
+Index("ix_promotions_ends_at_status", Promotion.ends_at, Promotion.status)
 

@@ -20,6 +20,9 @@ class PromotionRepository(BaseRepository[Promotion]):
     def get_by_id(self, promotion_id: int) -> Promotion | None:
         return self.db.get(Promotion, promotion_id)
 
+    def get_by_payment_id(self, *, payment_id: int) -> Promotion | None:
+        return self.db.execute(select(Promotion).where(Promotion.payment_id == payment_id)).scalar_one_or_none()
+
     def list(self, *, page: int = 1, page_size: int = 20, user_id: int | None = None) -> tuple[list[Promotion], int]:
         stmt = select(Promotion).order_by(Promotion.created_at.desc(), Promotion.id.desc())
         if user_id is not None:

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title or "Admin" }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; background: #f5f6fa; color: #222; }
+        .topbar { background: #111827; color: #fff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .container { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
+        .card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border-bottom: 1px solid #e5e7eb; text-align: left; padding: 10px; font-size: 14px; }
+        th { background: #f9fafb; }
+        a { color: #1d4ed8; text-decoration: none; }
+        .muted { color: #6b7280; font-size: 13px; }
+        .flash { padding: 10px 12px; border-radius: 6px; margin-bottom: 10px; }
+        .flash.success { background: #e7f8ef; color: #065f46; }
+        .flash.error { background: #fee2e2; color: #991b1b; }
+        .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .badge { display: inline-block; font-size: 12px; padding: 4px 8px; border-radius: 999px; background: #e5e7eb; }
+        input, select, textarea, button { font: inherit; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; }
+        button { background: #111827; color: white; border: none; cursor: pointer; }
+        button.secondary { background: #4b5563; }
+        .actions { display: flex; gap: 8px; }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div><strong>Marketplace Admin</strong></div>
+        <div class="row">
+            {% if admin_user %}
+                <span class="muted">{{ admin_user.email }}</span>
+                <form method="post" action="/admin/logout" style="margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="secondary">Logout</button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+    <div class="container">
+        {% for flash in flashes or [] %}
+            <div class="flash {{ flash.level }}">{{ flash.message }}</div>
+        {% endfor %}
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

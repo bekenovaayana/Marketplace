@@ -7,8 +7,9 @@ from app.core.dependencies import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.common import Page, PageMeta
-from app.schemas.payment import PaymentCreate, PaymentRead
+from app.schemas.payment import PaymentCreate, PaymentRead, PaymentWebhookRequest
 from app.services.payment_service import PaymentService
+from app.services.promotion_service import PromotionService
 
 
 router = APIRouter(prefix="/payments", tags=["payments"])
@@ -35,6 +36,21 @@ def simulate_success(
     current_user: User = Depends(get_current_user),
 ) -> PaymentRead:
     return PaymentService(db).simulate_success(actor=current_user, payment_id=payment_id)
+
+
+@router.post("/webhook", response_model=PaymentRead, summary="Mock payment provider webhook")
+def webhook(
+    payload: PaymentWebhookRequest,
+    db: Session = Depends(get_db),
+) -> PaymentRead:
+    payment = PaymentService(db).process_webhook(provider_reference=payload.provider_reference, event=payload.event)
+    # If this payment is linked to a promotion, finalize it too.
+    try:
+        PromotionService(db).finalize_from_payment(payment_intent_id=payload.provider_reference, event=payload.event)
+    except Exception:
+        # If no promotion exists, ignore (payments can exist independently).
+        pass
+    return payment
 
 
 @router.get("", response_model=Page[PaymentRead])

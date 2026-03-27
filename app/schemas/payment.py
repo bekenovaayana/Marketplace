@@ -30,3 +30,8 @@ class PaymentRead(BaseSchema, TimestampFields):
     provider_reference: str | None
     paid_at: datetime | None
 
+
+class PaymentWebhookRequest(BaseSchema):
+    provider_reference: str = Field(min_length=1, max_length=120)
+    event: str = Field(description="payment_succeeded or payment_failed")
+

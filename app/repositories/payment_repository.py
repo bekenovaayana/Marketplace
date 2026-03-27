@@ -20,6 +20,9 @@ class PaymentRepository(BaseRepository[Payment]):
     def get_by_id(self, payment_id: int) -> Payment | None:
         return self.db.get(Payment, payment_id)
 
+    def get_by_provider_reference(self, *, provider_reference: str) -> Payment | None:
+        return self.db.execute(select(Payment).where(Payment.provider_reference == provider_reference)).scalar_one_or_none()
+
     def list(self, *, page: int = 1, page_size: int = 20, user_id: int | None = None) -> tuple[list[Payment], int]:
         stmt = select(Payment).order_by(Payment.created_at.desc(), Payment.id.desc())
         if user_id is not None:

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from sqlalchemy import and_, or_, select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models.conversation import Conversation
+from app.models.listing import Listing
 from app.repositories.base import BaseRepository
 
 
@@ -23,7 +24,11 @@ class ConversationRepository(BaseRepository[Conversation]):
         stmt = (
             select(Conversation)
             .where(Conversation.id == conversation_id)
-            .options(joinedload(Conversation.participant_a), joinedload(Conversation.participant_b), joinedload(Conversation.listing))
+            .options(
+                joinedload(Conversation.participant_a),
+                joinedload(Conversation.participant_b),
+                selectinload(Conversation.listing).selectinload(Listing.images),
+            )
         )
         return self.db.execute(stmt).scalar_one_or_none()
 
@@ -55,7 +60,11 @@ class ConversationRepository(BaseRepository[Conversation]):
         if user_id is not None:
             stmt = stmt.where(or_(Conversation.participant_a_id == user_id, Conversation.participant_b_id == user_id))
         if with_participants:
-            stmt = stmt.options(joinedload(Conversation.participant_a), joinedload(Conversation.participant_b), joinedload(Conversation.listing))
+            stmt = stmt.options(
+                joinedload(Conversation.participant_a),
+                joinedload(Conversation.participant_b),
+                selectinload(Conversation.listing).selectinload(Listing.images),
+            )
         return self._paginate(stmt, page=page, page_size=page_size)
 
     def update(self, conversation: Conversation, data: dict) -> Conversation:

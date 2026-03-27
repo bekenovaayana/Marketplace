@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models.favorite import Favorite
@@ -59,6 +59,21 @@ class FavoriteRepository(BaseRepository[Favorite]):
             )
         )
         return self._paginate(stmt, page=page, page_size=page_size)
+
+    def top_category_ids_for_user(self, *, user_id: int, limit: int = 5) -> list[int]:
+        stmt = (
+            select(Listing.category_id, func.count(Favorite.id).label("cnt"))
+            .join(Listing, Favorite.listing_id == Listing.id)
+            .where(
+                Favorite.user_id == user_id,
+                Listing.category_id.is_not(None),
+                Listing.deleted_at.is_(None),
+            )
+            .group_by(Listing.category_id)
+            .order_by(func.count(Favorite.id).desc(), Listing.category_id.asc())
+            .limit(limit)
+        )
+        return [int(row[0]) for row in self.db.execute(stmt).all() if row[0] is not None]
 
     def update(self, favorite: Favorite, data: dict) -> Favorite:
         for k, v in data.items():
