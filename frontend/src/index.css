@@ -1,0 +1,41 @@
+:root {
+  --text: #1f2937;
+  --text-h: #111827;
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --border: #e5e7eb;
+  --muted: #6b7280;
+  --accent: #4f46e5;
+  --hover: rgba(0, 0, 0, 0.06);
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e5e7eb;
+    --text-h: #f9fafb;
+    --bg: #111827;
+    --surface: #1f2937;
+    --border: #374151;
+    --muted: #9ca3af;
+    --accent: #818cf8;
+    --hover: rgba(255, 255, 255, 0.06);
+  }
+}
+
+#root {
+  min-height: 100vh;
+  margin: 0 auto;
+  width: 100%;
+  text-align: left;
+}
+
+body {
+  margin: 0;
+}

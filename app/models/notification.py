@@ -18,6 +18,8 @@ class NotificationType(str, enum.Enum):
     PAYMENT_SUCCESSFUL = "payment_successful"
     PROMOTION_ACTIVATED = "promotion_activated"
     PROMOTION_EXPIRED = "promotion_expired"
+    LISTING_FAVORITED = "listing_favorited"
+    CONTACT_REQUEST = "contact_request"
 
 
 class Notification(Base, TimestampMixin):

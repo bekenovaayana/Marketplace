@@ -5,11 +5,12 @@ import re
 
 from pydantic import EmailStr, Field, field_validator
 
-from app.models.user import UserStatus
+from app.models.user import UserStatus, UserTheme
 from app.schemas.common import BaseSchema, TimestampFields
 
 
 _LANG_RE = re.compile(r"^(en|ru)$")
+_THEME_RE = re.compile(r"^(light|dark|system)$")
 _KG_PHONE_RE = re.compile(r"^\+996\d{9}$")
 
 
@@ -53,6 +54,14 @@ class UserUpdate(BaseSchema):
         description="Kyrgyzstan phone number in E.164 format: +996XXXXXXXXX",
         examples=["+996500123456"],
     )
+    theme: str | None = Field(default=None, max_length=16, description="UI theme: light, dark, or system")
+    notify_new_message: bool | None = Field(default=None, description="In-app notifications for new chat messages")
+    notify_contact_request: bool | None = Field(
+        default=None, description="In-app notifications when someone requests contact on your listing"
+    )
+    notify_listing_favorited: bool | None = Field(
+        default=None, description="In-app notifications when someone favorites your listing"
+    )
 
     @field_validator("first_name", "last_name", "bio", "city", "full_name", mode="before")
     @classmethod
@@ -93,6 +102,16 @@ class UserUpdate(BaseSchema):
             raise ValueError("phone must match +996XXXXXXXXX (9 digits after +996)")
         return normalized
 
+    @field_validator("theme")
+    @classmethod
+    def _validate_theme(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        normalized = v.strip().lower()
+        if not _THEME_RE.match(normalized):
+            raise ValueError("theme must be 'light', 'dark', or 'system'")
+        return normalized
+
 
 class UserRead(BaseSchema, TimestampFields):
     id: int
@@ -103,6 +122,10 @@ class UserRead(BaseSchema, TimestampFields):
     bio: str | None
     city: str | None
     preferred_language: str | None
+    theme: str = Field(default=UserTheme.SYSTEM.value)
+    notify_new_message: bool = True
+    notify_contact_request: bool = True
+    notify_listing_favorited: bool = True
     phone: str | None
     avatar_url: str | None
     email_verified: bool

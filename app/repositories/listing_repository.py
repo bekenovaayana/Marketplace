@@ -42,17 +42,46 @@ class ListingRepository(BaseRepository[Listing]):
         *,
         owner_id: int,
         status: ListingStatus | None = None,
+        category_id: int | None = None,
+        sort: str = "newest",
         page: int = 1,
         page_size: int = 20,
         with_owner: bool = True,
     ) -> tuple[list[Listing], int]:
-        stmt = (
-            select(Listing)
-            .where(Listing.owner_id == owner_id, Listing.deleted_at.is_(None))
-            .order_by(Listing.created_at.desc(), Listing.id.desc())
+        active_promo_exists = (
+            select(Promotion.id)
+            .where(
+                Promotion.listing_id == Listing.id,
+                Promotion.status == PromotionStatus.ACTIVE,
+                Promotion.ends_at > func.now(),
+            )
+            .exists()
         )
+        promo_rank = case((active_promo_exists, 0), else_=1)
+
+        stmt = select(Listing).where(Listing.owner_id == owner_id, Listing.deleted_at.is_(None))
         if status is not None:
             stmt = stmt.where(Listing.status == status)
+        if category_id is not None:
+            stmt = stmt.where(Listing.category_id == category_id)
+
+        if sort == "price_asc":
+            stmt = stmt.order_by(
+                promo_rank.asc(),
+                Listing.price.asc().nulls_last(),
+                Listing.created_at.desc(),
+                Listing.id.desc(),
+            )
+        elif sort == "price_desc":
+            stmt = stmt.order_by(
+                promo_rank.asc(),
+                Listing.price.desc().nulls_last(),
+                Listing.created_at.desc(),
+                Listing.id.desc(),
+            )
+        else:
+            stmt = stmt.order_by(promo_rank.asc(), Listing.created_at.desc(), Listing.id.desc())
+
         if with_owner:
             stmt = stmt.options(joinedload(Listing.owner), joinedload(Listing.category), selectinload(Listing.images))
         return self._paginate(stmt, page=page, page_size=page_size)

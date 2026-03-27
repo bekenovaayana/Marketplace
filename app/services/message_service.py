@@ -8,8 +8,7 @@ from app.models.message_attachment import MessageAttachment
 from app.models.user import User
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.message_repository import MessageRepository
-from app.repositories.notification_repository import NotificationRepository
-from app.models.notification import NotificationType
+from app.services.notification_service import NotificationService
 
 
 class MessageService:
@@ -17,7 +16,6 @@ class MessageService:
         self.db = db
         self.conversations = ConversationRepository(db)
         self.messages = MessageRepository(db)
-        self.notifications = NotificationRepository(db)
 
     def send_message(
         self,
@@ -101,15 +99,11 @@ class MessageService:
             convo.participant_b_id if actor.id == convo.participant_a_id else convo.participant_a_id
         )
         sender_name = actor.full_name or "Someone"
-        self.notifications.create_notification(
-            user_id=recipient_id,
-            notification_type=NotificationType.NEW_MESSAGE,
-            title="New message",
-            body=f"{sender_name} sent you a message",
-            entity_type="conversation",
-            entity_id=conversation_id,
+        NotificationService(self.db).notify_new_message(
+            recipient_id=recipient_id,
+            sender_name=sender_name,
+            conversation_id=conversation_id,
         )
-
         self.db.commit()
         return msg
 

@@ -1,17 +1,22 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.listing_contact_intent import ListingContactIntent
 from app.models.listing_image import ListingImage
 from app.models.listing import Listing, ListingStatus
 from app.models.user import User
 from app.repositories.category_repository import CategoryRepository
 from app.repositories.favorite_repository import FavoriteRepository
 from app.repositories.listing_repository import ListingRepository
+from app.services.notification_service import NotificationService
+
+CONTACT_INTENT_THROTTLE_HOURS = 24
 
 
 class ListingService:
@@ -257,16 +262,69 @@ class ListingService:
         *,
         actor: User,
         status_filter: ListingStatus | None = None,
+        category_id: int | None = None,
+        sort: str = "newest",
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[Listing], int]:
         return self.listings.list_by_owner(
             owner_id=actor.id,
             status=status_filter,
+            category_id=category_id,
+            sort=sort,
             page=page,
             page_size=page_size,
             with_owner=True,
         )
+
+    def record_contact_intent(self, *, actor: User, listing_id: int) -> None:
+        """Persist a contact intent and optionally notify the listing owner.
+
+        Throttled to one successful request per (actor, listing) every 24 hours.
+        Separate from chat: expresses interest in the seller's phone / callback, not a new_message notification.
+        """
+        listing = self.listings.get_by_id(listing_id)
+        if not listing or listing.deleted_at is not None or listing.status != ListingStatus.ACTIVE:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
+        if listing.owner_id == actor.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot request contact for your own listing",
+            )
+
+        stmt = (
+            select(ListingContactIntent)
+            .where(
+                ListingContactIntent.actor_user_id == actor.id,
+                ListingContactIntent.listing_id == listing_id,
+            )
+            .order_by(ListingContactIntent.created_at.desc())
+            .limit(1)
+        )
+        prev = self.db.execute(stmt).scalar_one_or_none()
+        if prev is not None:
+            prev_at = prev.created_at
+            if prev_at.tzinfo is None:
+                prev_at = prev_at.replace(tzinfo=timezone.utc)
+            delta = datetime.now(timezone.utc) - prev_at
+            if delta < timedelta(hours=CONTACT_INTENT_THROTTLE_HOURS):
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Contact request limit: one per listing every 24 hours",
+                )
+
+        self.db.add(ListingContactIntent(actor_user_id=actor.id, listing_id=listing_id))
+        self.db.flush()
+
+        title = listing.title or "Listing"
+        NotificationService(self.db).notify_contact_request(
+            owner_id=listing.owner_id,
+            requester_id=actor.id,
+            listing_id=listing_id,
+            listing_title=title,
+            requester_name=actor.full_name or "Someone",
+        )
+        self.db.commit()
 
     def soft_delete_listing(self, *, listing_id: int, actor: User) -> Listing:
         listing = self.listings.get_by_id(listing_id)
@@ -286,7 +344,7 @@ class ListingService:
     def _build_images(images: list[dict]) -> list[ListingImage]:
         sorted_images = sorted(images, key=lambda i: (i.get("sort_order", 0), i.get("url", "")))
         return [
-            ListingImage(url=image["url"], sort_order=index)
+            ListingImage(url=str(image["url"]), sort_order=index)
             for index, image in enumerate(sorted_images)
         ]
 

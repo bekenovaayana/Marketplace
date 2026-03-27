@@ -69,6 +69,16 @@ class UserService:
                 raise field_error("phone", "must match +996XXXXXXXXX (9 digits after +996)")
             data["phone"] = normalized_phone
 
+        if "theme" in data and data["theme"] is not None:
+            normalized_theme = str(data["theme"]).strip().lower()
+            if normalized_theme not in ("light", "dark", "system"):
+                raise field_error("theme", "must be 'light', 'dark', or 'system'")
+            data["theme"] = normalized_theme
+
+        for flag in ("notify_new_message", "notify_contact_request", "notify_listing_favorited"):
+            if flag in data and data[flag] is not None and not isinstance(data[flag], bool):
+                raise field_error(flag, "must be a boolean")
+
         try:
             updated = self.users.update(actor, data)
             self.db.commit()

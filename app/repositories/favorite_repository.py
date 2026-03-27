@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import and_, func, select
-from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.favorite import Favorite
 from app.models.listing import Listing
@@ -26,8 +26,8 @@ class FavoriteRepository(BaseRepository[Favorite]):
             select(Favorite)
             .where(Favorite.id == favorite_id)
             .options(
-                joinedload(Favorite.listing).joinedload(Listing.owner),
-                joinedload(Favorite.listing).joinedload(Listing.category),
+                selectinload(Favorite.listing).selectinload(Listing.owner),
+                selectinload(Favorite.listing).selectinload(Listing.category),
                 selectinload(Favorite.listing).selectinload(Listing.images),
             )
         )
@@ -53,8 +53,8 @@ class FavoriteRepository(BaseRepository[Favorite]):
             .where(Favorite.user_id == user_id)
             .order_by(Favorite.created_at.desc(), Favorite.id.desc())
             .options(
-                joinedload(Favorite.listing).joinedload(Listing.owner),
-                joinedload(Favorite.listing).joinedload(Listing.category),
+                selectinload(Favorite.listing).selectinload(Listing.owner),
+                selectinload(Favorite.listing).selectinload(Listing.category),
                 selectinload(Favorite.listing).selectinload(Listing.images),
             )
         )

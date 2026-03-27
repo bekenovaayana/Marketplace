@@ -8,6 +8,7 @@ from app.models.listing import ListingStatus
 from app.models.user import User
 from app.repositories.favorite_repository import FavoriteRepository
 from app.repositories.listing_repository import ListingRepository
+from app.services.notification_service import NotificationService
 
 
 class FavoriteService:
@@ -26,6 +27,15 @@ class FavoriteService:
 
         fav = Favorite(user_id=actor.id, listing_id=listing_id)
         self.favorites.create(fav)
+        self.db.flush()
+        title = listing.title or "Listing"
+        NotificationService(self.db).notify_listing_favorited(
+            owner_id=listing.owner_id,
+            favoriter_id=actor.id,
+            listing_id=listing_id,
+            listing_title=title,
+            favoriter_name=actor.full_name or "Someone",
+        )
         self.db.commit()
         return fav
 

@@ -116,6 +116,13 @@ class PromotionService:
 
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unsupported webhook event")
 
-    def list_promotions(self, *, actor: User, page: int = 1, page_size: int = 20) -> tuple[list[Promotion], int]:
-        return self.promotions.list(page=page, page_size=page_size, user_id=actor.id)
+    def list_promotions(
+        self,
+        *,
+        actor: User,
+        page: int = 1,
+        page_size: int = 20,
+        status: PromotionStatus | None = None,
+    ) -> tuple[list[Promotion], int]:
+        return self.promotions.list(page=page, page_size=page_size, user_id=actor.id, status=status)
 

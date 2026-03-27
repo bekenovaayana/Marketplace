@@ -23,7 +23,10 @@ class NotificationService:
         recipient_id: int,
         sender_name: str,
         conversation_id: int,
-    ) -> Notification:
+    ) -> Notification | None:
+        recipient = self.db.get(User, recipient_id)
+        if not recipient or not recipient.notify_new_message:
+            return None
         n = self.repo.create_notification(
             user_id=recipient_id,
             notification_type=NotificationType.NEW_MESSAGE,
@@ -31,6 +34,58 @@ class NotificationService:
             body=f"{sender_name} sent you a message",
             entity_type="conversation",
             entity_id=conversation_id,
+        )
+        self.db.commit()
+        return n
+
+    def notify_listing_favorited(
+        self,
+        *,
+        owner_id: int,
+        favoriter_id: int,
+        listing_id: int,
+        listing_title: str,
+        favoriter_name: str,
+    ) -> Notification | None:
+        if owner_id == favoriter_id:
+            return None
+        owner = self.db.get(User, owner_id)
+        if not owner or not owner.notify_listing_favorited:
+            return None
+        safe_title = listing_title.strip() if listing_title else "Listing"
+        n = self.repo.create_notification(
+            user_id=owner_id,
+            notification_type=NotificationType.LISTING_FAVORITED,
+            title="Listing favorited",
+            body=f'{favoriter_name} added "{safe_title}" to favorites',
+            entity_type="listing",
+            entity_id=listing_id,
+        )
+        self.db.commit()
+        return n
+
+    def notify_contact_request(
+        self,
+        *,
+        owner_id: int,
+        requester_id: int,
+        listing_id: int,
+        listing_title: str,
+        requester_name: str,
+    ) -> Notification | None:
+        if owner_id == requester_id:
+            return None
+        owner = self.db.get(User, owner_id)
+        if not owner or not owner.notify_contact_request:
+            return None
+        safe_title = listing_title.strip() if listing_title else "Listing"
+        n = self.repo.create_notification(
+            user_id=owner_id,
+            notification_type=NotificationType.CONTACT_REQUEST,
+            title="Contact request",
+            body=f'{requester_name} wants to contact you about "{safe_title}"',
+            entity_type="listing",
+            entity_id=listing_id,
         )
         self.db.commit()
         return n

@@ -10,6 +10,8 @@ F  POST /notifications/{id}/read marks single notification as read
 G  unread_count drops to 0 after marking read
 H  POST /notifications/read-all works when already all read (returns 0)
 I  Non-owner cannot read another user's notification (404)
+J  GET /users/me includes theme + notify_* fields; PATCH toggles them
+    (Full favorite/contact-intent flows: pytest tests/test_notification_preferences_api.py)
 """
 from __future__ import annotations
 
@@ -111,5 +113,19 @@ code, _ = request("GET", f"/notifications", token=tok_a)
 # Alice has no notifications (she sent the message, not received)
 code2, data2 = request("POST", f"/notifications/{notif_id}/read", token=tok_a)
 check("I: non-owner gets 404 on other's notification", code2 == 404)
+
+# J — settings fields on /users/me
+code, me_b2 = request("GET", "/users/me", token=tok_b)
+check("J: /users/me includes theme", code == 200 and me_b2.get("theme") == "system")
+check("J: notify_new_message default true", me_b2.get("notify_new_message") is True)
+code, patched = request(
+    "PATCH",
+    "/users/me",
+    token=tok_b,
+    body={"theme": "dark", "notify_listing_favorited": False},
+)
+check("J: PATCH prefs 200", code == 200)
+check("J: theme updated", patched.get("theme") == "dark")
+check("J: notify_listing_favorited false", patched.get("notify_listing_favorited") is False)
 
 print("STAGE7_SMOKE_COMPLETE")

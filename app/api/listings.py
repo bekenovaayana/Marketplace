@@ -21,6 +21,7 @@ from app.schemas.listing import (
     ListingWithOwnerRead,
     PublishListingResponse,
 )
+from app.schemas.user import DetailMessage
 from app.services.listing_service import ListingService
 
 
@@ -86,11 +87,22 @@ def list_listings(
     )
 
 
+class MyListingsSort(str, Enum):
+    NEWEST = "newest"
+    PRICE_ASC = "price_asc"
+    PRICE_DESC = "price_desc"
+
+
 @router.get("/me", response_model=Page[ListingWithOwnerRead])
 def list_my_listings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     status_filter: ListingMyStatus | None = Query(default=None, alias="status"),
+    category_id: int | None = Query(default=None, gt=0, description="Filter by listing category"),
+    sort: MyListingsSort = Query(
+        default=MyListingsSort.NEWEST,
+        description="Sort: newest, price_asc, price_desc; boosted listings rank first",
+    ),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ) -> Page[ListingWithOwnerRead]:
@@ -98,6 +110,8 @@ def list_my_listings(
     items, total = ListingService(db).list_my_listings(
         actor=current_user,
         status_filter=filter_value,
+        category_id=category_id,
+        sort=sort.value,
         page=page,
         page_size=page_size,
     )
@@ -170,6 +184,26 @@ def preview_listing(
     current_user: User | None = Depends(get_optional_current_user),
 ) -> ListingWithOwnerRead:
     return ListingService(db).get_preview_listing(listing_id=listing_id, actor=current_user, with_owner=True)
+
+
+@router.post(
+    "/{listing_id}/contact-intent",
+    response_model=DetailMessage,
+    status_code=status.HTTP_201_CREATED,
+    summary="Notify seller of contact interest",
+    description=(
+        "Records that the current user wants to contact the seller about this listing. "
+        "Throttled to once per listing per 24 hours. Does not replace chat messages "
+        "(see notify_new_message); uses notify_contact_request preference on the seller."
+    ),
+)
+def record_listing_contact_intent(
+    listing_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DetailMessage:
+    ListingService(db).record_contact_intent(actor=current_user, listing_id=listing_id)
+    return DetailMessage(detail="Contact request recorded")
 
 
 @router.get("/{listing_id}", response_model=ListingPublicRead)

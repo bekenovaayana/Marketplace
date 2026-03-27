@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Index, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, Index, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -14,6 +14,12 @@ class UserStatus(str, enum.Enum):
     ACTIVE = "active"
     SUSPENDED = "suspended"
     DELETED = "deleted"
+
+
+class UserTheme(str, enum.Enum):
+    LIGHT = "light"
+    DARK = "dark"
+    SYSTEM = "system"
 
 
 class User(Base, TimestampMixin):
@@ -29,6 +35,12 @@ class User(Base, TimestampMixin):
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
     city: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
     preferred_language: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    theme: Mapped[str] = mapped_column(String(16), nullable=False, server_default=UserTheme.SYSTEM.value)
+
+    notify_new_message: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
+    notify_contact_request: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
+    notify_listing_favorited: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
+
     phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     email_verified: Mapped[bool] = mapped_column(default=False, nullable=False, server_default="0")

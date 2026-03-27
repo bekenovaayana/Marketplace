@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
 from app.db.session import get_db
+from app.models.promotion import PromotionStatus
 from app.models.user import User
 from app.schemas.common import Page, PageMeta
 from app.schemas.promotion import (
@@ -44,8 +45,11 @@ def list_promotions(
     current_user: User = Depends(get_current_user),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    status: PromotionStatus | None = Query(default=None, description="e.g. pending_payment for unpaid boosts"),
 ) -> Page[PromotionRead]:
-    items, total = PromotionService(db).list_promotions(actor=current_user, page=page, page_size=page_size)
+    items, total = PromotionService(db).list_promotions(
+        actor=current_user, page=page, page_size=page_size, status=status
+    )
     total_pages = (total + page_size - 1) // page_size if page_size else 0
     return Page(items=items, meta=PageMeta(page=page, page_size=page_size, total_items=total, total_pages=total_pages))
 
@@ -60,4 +64,3 @@ def list_my_promotions(
     items, total = PromotionService(db).list_promotions(actor=current_user, page=page, page_size=page_size)
     total_pages = (total + page_size - 1) // page_size if page_size else 0
     return Page(items=items, meta=PageMeta(page=page, page_size=page_size, total_items=total, total_pages=total_pages))
-

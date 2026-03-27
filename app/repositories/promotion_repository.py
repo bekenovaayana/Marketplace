@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.promotion import Promotion
+from app.models.promotion import Promotion, PromotionStatus
 from app.repositories.base import BaseRepository
 
 
@@ -23,10 +23,19 @@ class PromotionRepository(BaseRepository[Promotion]):
     def get_by_payment_id(self, *, payment_id: int) -> Promotion | None:
         return self.db.execute(select(Promotion).where(Promotion.payment_id == payment_id)).scalar_one_or_none()
 
-    def list(self, *, page: int = 1, page_size: int = 20, user_id: int | None = None) -> tuple[list[Promotion], int]:
+    def list(
+        self,
+        *,
+        page: int = 1,
+        page_size: int = 20,
+        user_id: int | None = None,
+        status: PromotionStatus | None = None,
+    ) -> tuple[list[Promotion], int]:
         stmt = select(Promotion).order_by(Promotion.created_at.desc(), Promotion.id.desc())
         if user_id is not None:
             stmt = stmt.where(Promotion.user_id == user_id)
+        if status is not None:
+            stmt = stmt.where(Promotion.status == status)
         return self._paginate(stmt, page=page, page_size=page_size)
 
     def update(self, promotion: Promotion, data: dict) -> Promotion:
